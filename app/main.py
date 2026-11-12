@@ -20,5 +20,6 @@ pages = [
     st.Page("views/impact.py", title="Flood Impact Analysis", icon="🏘️"),
     st.Page("views/alerts.py", title="Alert Centre", icon="🚨"),
     st.Page("views/roadmap.py", title="Roadmap", icon="🧭"),
+    st.Page("views/citizen.py", title="Citizen View", icon="📍"),
 ]
 st.navigation(pages).run()

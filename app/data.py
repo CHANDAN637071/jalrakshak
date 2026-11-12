@@ -53,5 +53,19 @@ def log_alert(level, lat, lon, rain3, status):
     row.to_csv(LOG, mode="a", header=not LOG.exists(), index=False)
 
 def read_log():
-    return pd.read_csv(LOG) if LOG.exists() else pd.DataFrame(
-        columns=["time", "level", "lat", "lon", "rain_3d_mm", "status"])
+    cols = ["time", "level", "lat", "lon", "rain_3d_mm", "status"]
+    return pd.read_csv(LOG) if LOG.exists() else pd.DataFrame(columns=cols)
+
+
+@st.cache_data(ttl=3600)
+def route_to(lat, lon, dlat, dlon):
+    """OSRM public server se driving route. Fail ho to None."""
+    try:
+        url = f"https://router.project-osrm.org/route/v1/driving/{lon},{lat};{dlon},{dlat}"
+        r = requests.get(url, params={"overview": "full", "geometries": "geojson"}, timeout=20)
+        r.raise_for_status()
+        rt = r.json()["routes"][0]
+        coords = [(c[1], c[0]) for c in rt["geometry"]["coordinates"]]
+        return coords, round(rt["distance"] / 1000, 1), round(rt["duration"] / 60)
+    except Exception:
+        return None
