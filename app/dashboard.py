@@ -1,6 +1,7 @@
 import sys, io, wave, math, struct
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # project root
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 import requests
@@ -16,7 +17,10 @@ st.caption("Research prototype. Official warnings ke liye IMD / OSDMA follow kar
 
 @st.cache_data
 def load_risk():
-    return pd.read_csv("data/processed/risk_map_2022.csv")
+    df = pd.read_csv(ROOT / "data" / "processed" / "risk_map_2022.csv")
+    if "pop_est" not in df.columns:
+        df["pop_est"] = 0
+    return df
 
 @st.cache_data(ttl=600)
 def weather(lat, lon):
@@ -37,7 +41,7 @@ def siren_wav():
     with wave.open(buf, "wb") as f:
         f.setnchannels(1); f.setsampwidth(2); f.setframerate(rate)
         for i in range(rate * 3):
-            freq = 600 + 400 * abs(math.sin(math.pi * i / rate))   # upar-neeche siren
+            freq = 600 + 400 * abs(math.sin(math.pi * i / rate))
             f.writeframes(struct.pack("<h", int(12000 * math.sin(2 * math.pi * freq * i / rate))))
     return buf.getvalue()
 
@@ -45,12 +49,11 @@ risk = load_risk()
 COLORS = {"Low": "#2ecc71", "Medium": "#f39c12", "High": "#e74c3c"}
 
 st.sidebar.header("Location")
-lat = st.sidebar.number_input("Latitude", 20.20, 20.90, 20.50, 0.01)
-lon = st.sidebar.number_input("Longitude", 86.20, 87.00, 86.60, 0.01)
+lat = st.sidebar.number_input("Latitude", 20.20, 20.90, 20.80, 0.01)
+lon = st.sidebar.number_input("Longitude", 86.20, 87.00, 86.40, 0.01)
 test_rain = st.sidebar.checkbox("Demo mode: heavy rain simulate karo")
 
-cell = risk.loc(((risk.lat - lat) ** 2 + (risk.lon - lon) ** 2).idxmin()) if False else \
-       risk.loc[((risk.lat - lat) ** 2 + (risk.lon - lon) ** 2).idxmin()]
+cell = risk.loc[((risk.lat - lat) ** 2 + (risk.lon - lon) ** 2).idxmin()]
 level = cell["risk_level"]
 
 rain3 = 0.0
@@ -80,6 +83,14 @@ with col2:
         st.warning("Flood-prone area. Abhi heavy rain forecast nahi hai.")
     else:
         st.success("Abhi koi alert nahi.")
+
+    st.subheader("Population at risk (estimate)")
+    hi = int(risk[risk.risk_level == "High"].pop_est.sum())
+    me = int(risk[risk.risk_level == "Medium"].pop_est.sum())
+    st.metric("High-risk cells mein log", f"{hi:,}")
+    st.metric("Medium-risk cells mein log", f"{me:,}")
+    st.metric("Is cell mein log", f"{int(cell['pop_est']):,}")
+    st.caption("WorldPop se approximate estimate, census nahi.")
 
     try:
         shelters = shelters_near(lat, lon)
