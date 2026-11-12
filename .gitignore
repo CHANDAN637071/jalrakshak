@@ -1,8 +1,10 @@
 venv/
 .env
-data/raw/
-data/processed/*.csv
-models/*.pkl
 __pycache__/
 .ipynb_checkpoints/
 *.tif
+data/raw/
+data/processed/*.csv
+!data/processed/risk_map_2022.csv
+data/processed/alert_log.csv
+notebooks/
